@@ -1,0 +1,71 @@
+/* 티커 브레이커 — 월스트리트 프리미엄 아케이드 */
+:root{
+  --bg:#0a1526;--navy:#101E34;--ink:#F5F2E9;--mute:rgba(245,242,233,.62);
+  --up:#20C997;--dn:#FF6572;--gold:#DCAF61;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0}
+body{
+  display:flex;justify-content:center;overflow:hidden;
+  background:radial-gradient(120% 70% at 50% 0%,#16294d 0%,var(--bg) 70%);
+  color:var(--ink);
+  font-family:"Pretendard","SF Pro Display","Helvetica Neue",Arial,"Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif;
+  touch-action:none;overscroll-behavior:none;
+  user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;
+}
+#app{
+  width:100%;max-width:440px;height:100vh;height:100dvh;
+  display:flex;flex-direction:column;gap:6px;
+  padding:calc(8px + env(safe-area-inset-top,0px)) 12px calc(8px + env(safe-area-inset-bottom,0px));
+}
+
+/* 상단 HUD */
+.hud{display:flex;justify-content:space-between;align-items:baseline;font-variant-numeric:tabular-nums}
+.hud span{font-size:13px;color:var(--mute)}
+.hud b{font-size:20px;font-weight:800;letter-spacing:-.01em;color:var(--gold)}
+#li{letter-spacing:2px}
+#li i{font-style:normal}
+
+/* 게임 영역 */
+#wrap{flex:1;min-height:0;display:flex;justify-content:center;align-items:center;position:relative}
+#c{display:block;border-radius:10px;box-shadow:0 0 0 1px rgba(220,175,97,.35),0 12px 32px rgba(0,0,0,.55)}
+
+/* 시작 · 게임오버 · 라운드 클리어 오버레이 */
+#ov{
+  position:absolute;inset:0;margin:auto;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:10px;padding:24px;text-align:center;pointer-events:none;border-radius:10px;
+  background:radial-gradient(ellipse at center,rgba(6,12,24,.80) 0%,rgba(6,12,24,.50) 60%,rgba(6,12,24,.15) 100%);
+}
+#ov h1{
+  margin:0;font-size:36px;font-weight:900;letter-spacing:-.02em;line-height:1.1;
+  background:linear-gradient(180deg,#FFF1C2 0%,#DCAF61 58%,#A8772C 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 2px 6px rgba(0,0,0,.8));
+}
+#ov h1.bad{background-image:linear-gradient(180deg,#FFD0D4 0%,#FF6572 58%,#C23B49 100%)}
+#ov p{margin:0;font-size:16px;line-height:1.55;color:var(--ink);text-shadow:0 1px 8px #000,0 0 16px #000}
+#ov small{font-size:13px;color:var(--mute);text-shadow:0 1px 6px #000}
+.btn{
+  margin-top:10px;min-width:220px;min-height:58px;padding:16px 34px;
+  display:flex;align-items:center;justify-content:center;
+  border-radius:999px;font-size:21px;font-weight:900;letter-spacing:.01em;color:#2a1802;
+  background:linear-gradient(180deg,#F7E3AE 0%,#DCAF61 48%,#B98B3F 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.7),inset 0 -3px 0 rgba(90,58,8,.45),0 8px 24px rgba(0,0,0,.55),0 0 22px rgba(220,175,97,.4);
+  animation:pulse 1.8s ease-in-out infinite;
+}
+@keyframes pulse{50%{transform:scale(1.04)}}
+
+/* 체결 내역 · 브랜드 */
+#tape{height:20px;overflow:hidden;white-space:nowrap;display:flex;gap:14px;
+  font:600 13px ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--mute)}
+#tape .u{color:var(--up)}#tape .d{color:var(--dn)}
+#brand{text-align:center;font-size:12px;letter-spacing:.06em;color:rgba(220,175,97,.88);line-height:1.2}
+#brand i{font-style:normal;opacity:.5;margin:0 .45em}
+
+@media (prefers-reduced-motion:reduce){.btn{animation:none}}
+
+/* 강의용 정보: 가상 시세 안내, 화면이 작은 스마트폰에서 가독성 유지 */
+#notice{margin:0;text-align:center;color:rgba(245,242,233,.62);font-size:10px;line-height:1.25;letter-spacing:.01em}
+@media(max-height:650px){#app{gap:3px;padding-top:4px;padding-bottom:4px}.hud b{font-size:17px}#tape{height:17px}#brand{font-size:10px}#notice{font-size:9px}}

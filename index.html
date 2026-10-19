@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0a1526">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>티커 브레이커 | 방구석월가</title>
+<meta name="description" content="미국주식 티커 벽돌을 깨고 포트폴리오를 키우는 월스트리트 아케이드 게임">
+<meta property="og:title" content="티커 브레이커 | 방구석월가">
+<meta property="og:description" content="미국주식 티커 벽돌을 깨고 게임 점수를 쌓아보세요.">
+<meta property="og:image" content="bg.jpg">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%93%88%3C/text%3E%3C/svg%3E">
+<link rel="preload" as="image" href="bg.jpg">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main id="app">
+  <header class="hud">
+    <div><span>포트폴리오</span> <b id="sc">$0</b></div>
+    <span id="lv">라운드 1</span>
+    <span id="li" aria-label="남은 목숨"><i>🐂</i><i>🐂</i><i>🐂</i></span>
+  </header>
+
+  <section id="wrap">
+    <canvas id="c" aria-label="미국주식 티커 벽돌깨기 게임 화면"></canvas>
+    <div id="ov">
+      <h1>티커 브레이커</h1>
+      <p>미국주식 티커를 깨고<br>게임 점수를 쌓아보세요</p>
+      <div class="btn">터치하여 시작</div>
+      <small>손가락을 좌우로 움직여 공을 받아내세요</small>
+    </div>
+  </section>
+
+  <p id="notice">게임용 가상 등락률 · 실제 주가 아님 · 투자 권유 아님</p>
+  <div id="tape">벽돌을 깨면 체결 내역이 표시됩니다</div>
+  <footer id="brand">방구석월가<i>|</i>미국주식 결을 읽다</footer>
+</main>
+<script src="script.js"></script>
+</body>
+</html>
