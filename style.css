@@ -27,6 +27,21 @@ body{
 #li{letter-spacing:2px}
 #li i{font-style:normal}
 
+
+/* 기업 정보 패널 */
+#co{height:46px;flex:none;display:flex;align-items:center;gap:10px;padding:6px 12px 6px 8px;border-radius:12px;background:linear-gradient(180deg,rgba(24,42,72,.92),rgba(16,30,52,.92));border:1px solid rgba(220,175,97,.35)}
+#lg{flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;overflow:hidden;font:900 12px/1 "Helvetica Neue",Arial,sans-serif;letter-spacing:-.02em;color:#2a1802;background:linear-gradient(180deg,#F7E3AE,#DCAF61 55%,#B98B3F);box-shadow:inset 0 1px 0 rgba(255,255,255,.7),0 0 0 1.5px rgba(16,30,52,.9)}
+#lg[data-len="4"]{font-size:9.5px}#lg[data-len="5"]{font-size:8px}
+#lg.img{background:#fff}
+#lg img{width:100%;height:100%;object-fit:contain;display:block}
+#nm{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+#cn{font-size:14px;font-weight:800;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#cs{font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--gold)}
+#cp{flex:none;font-style:normal;font-size:16px;font-weight:900;font-variant-numeric:tabular-nums}
+.flash{animation:flash .55s ease-out}
+@keyframes flash{0%{box-shadow:0 0 0 2px rgba(220,175,97,.95)}100%{box-shadow:0 0 0 0 rgba(220,175,97,0)}}
+@media(max-height:650px){#co{height:39px;padding:3px 8px}#lg{width:30px;height:30px}#cn{font-size:12px}#cp{font-size:13px}}
+
 /* 게임 영역 */
 #wrap{flex:1;min-height:0;display:flex;justify-content:center;align-items:center;position:relative}
 #c{display:block;border-radius:10px;box-shadow:0 0 0 1px rgba(220,175,97,.35),0 12px 32px rgba(0,0,0,.55)}
@@ -64,7 +79,7 @@ body{
 #brand{text-align:center;font-size:12px;letter-spacing:.06em;color:rgba(220,175,97,.88);line-height:1.2}
 #brand i{font-style:normal;opacity:.5;margin:0 .45em}
 
-@media (prefers-reduced-motion:reduce){.btn{animation:none}}
+@media (prefers-reduced-motion:reduce){.btn,.flash{animation:none}}
 
 /* 강의용 정보: 가상 시세 안내, 화면이 작은 스마트폰에서 가독성 유지 */
 #notice{margin:0;text-align:center;color:rgba(245,242,233,.62);font-size:10px;line-height:1.25;letter-spacing:.01em}
