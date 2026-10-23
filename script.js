@@ -6,7 +6,7 @@
 /* ---------- 설정 ---------- */
 const W = 360, H = 560, COLS = 6, BW = 52, BH = 28, GAP = 4;
 const OX = (W - COLS * BW - (COLS - 1) * GAP) / 2, OY = 26;
-const PAD_W = 150, PAD_H = 29;               // 패들 크기(논리 좌표). 키우면 쉬워지고 줄이면 어려워집니다.
+const PAD_W = 90, PAD_H = 19.5;               // 패들 크기(논리 좌표). 키우면 쉬워지고 줄이면 어려워집니다.
 const NAVY = "#101E34", GOLD = "#DCAF61", OFFW = "#F5F2E9", UPC = "#20C997", DNC = "#FF6572";
 const SANS = '"Pretendard","SF Pro Display","Helvetica Neue",Arial,"Apple SD Gothic Neo","Noto Sans KR",sans-serif';
 const TICKERS = "AAPL MSFT NVDA GOOGL AMZN META TSLA AVGO BRK.B LLY V JPM WMT XOM UNH MA COST ORCL NFLX HD PG JNJ KO PEP AMD CRM ADBE DIS NKE SBUX PLTR UBER ABNB COIN SOFI RIVN F T INTC PFE BAC PYPL".split(" ");
@@ -15,7 +15,7 @@ const BIG = new Set("AAPL MSFT NVDA GOOGL AMZN META TSLA AVGO".split(" "));
 /* ---------- 상태 ---------- */
 const $ = id => document.getElementById(id);
 const cv = $("c"), ctx = cv.getContext("2d", { alpha: false }), ov = $("ov"), wrap = $("wrap");
-let sc = 1, state = "title", stateAt = 0, level = 1, score = 0, lives = 3, broken = 0, speed = 4.2;
+let sc = 1, state = "title", stateAt = 0, level = 1, score = 0, lives = 3, broken = 0, speed = 4.2, best = 0;
 let bricks = [], floats = [], tape = [], parts = [], trail = [];
 let bg = null, bgBlur = null, padSprite = null, bgReady = false;
 const pad = { x: W / 2, y: H - 42, w: PAD_W, h: PAD_H };
@@ -93,16 +93,17 @@ function makePad() {
   rr(x + .5, y + .5, w - 1, h - 1, r); g.strokeStyle = "rgba(46,28,4,.9)"; g.lineWidth = 1; g.stroke();
 
   // WALL STREET 명판 (밝게 오목한 판 + 진한 갈색 각인 글자)
-  const px = x + 9, pw = w - 18, py = y + 5, ph = h - 10;
-  rr(px, py, pw, ph, ph / 2); g.fillStyle = "rgba(255,242,196,.68)"; g.fill();
+  const px = x + 8, pw = w - 16, py = y + 3.5, ph = h - 7;
+  rr(px, py, pw, ph, ph / 2); g.fillStyle = "rgba(255,242,196,.42)"; g.fill();
   rr(px + .5, py + .5, pw - 1, ph - 1, ph / 2); g.strokeStyle = "rgba(90,58,8,.45)"; g.lineWidth = 1; g.stroke();
-  const txt = "WALL STREET", maxW = pw - 12;
-  let fs = 14, sp = .8, tot = 0, ws = [];
-  for (; fs >= 10; fs -= .5) {
+  const txt = "WALL STREET", maxW = pw - 8;
+  let fs = 12, sp = .5, tot = 0, ws = [];
+  for (;;) {
     g.font = "900 " + fs + "px " + SANS;
     ws = [...txt].map(c => g.measureText(c).width);
     tot = ws.reduce((a, b) => a + b, 0) + sp * (txt.length - 1);
-    if (tot <= maxW) break;
+    if (tot <= maxW || fs <= 6) break;
+    fs -= .25;
   }
   g.textAlign = "left"; g.textBaseline = "middle";
   const cy = y + h / 2 + .5;
@@ -123,7 +124,7 @@ function build() {
   });
 }
 function resetBall() { state = "ready"; ball.vx = ball.vy = 0; }
-function newGame() { level = 1; score = 0; lives = 3; broken = 0; tape = []; build(); speed = 4.2; resetBall(); ui(); }
+function newGame() { level = 1; score = 0; lives = 3; broken = 0; tape = []; build(); speed = 4.2; resetBall(); resetCo(); ui(); }
 function nextLevel() { level++; speed = Math.min(8, 4.2 + .45 * (level - 1)); broken = 0; build(); resetBall(); ui(); }
 function launch() {
   const a = Math.random() * .6 - .3;
@@ -161,7 +162,7 @@ function burst(x, y, c, n, sp) {
   }
 }
 function hit(b) {
-  b.hp--; burst(ball.x, ball.y, GOLD, 4, 1.7);
+  b.hp--; burst(ball.x, ball.y, GOLD, 4, 1.7); showCo(b);
   if (b.hp <= 0) {
     burst(b.x + BW / 2, b.y + BH / 2, b.up ? UPC : DNC, 12, 2.8);
     b.alive = false; broken++;
@@ -170,6 +171,7 @@ function hit(b) {
     tape.unshift({ t: b.t, pct: b.pct, up: b.up });
     if (!bricks.some(k => k.alive)) {
       const bonus = lives * 500; score += bonus; state = "clear";
+      if (score > best) best = score;
       show("라운드 " + level + " 클리어", "잔여 목숨 보너스 +$" + bonus.toLocaleString("en-US"), "다음 라운드");
     }
   }
@@ -204,10 +206,38 @@ function step(dt) {
   if (ball.y > H + ball.r && state === "play") {
     lives--; ui();
     if (lives <= 0) {
-      state = "over";
-      show("게임 오버", "최종 게임 점수 $" + score.toLocaleString("en-US"), "다시 시작", "", true);
+      state = "over"; if (score > best) best = score;
+      show("게임 오버", "최종 $" + score.toLocaleString("en-US") + "<br>이번 접속 최고 $" + best.toLocaleString("en-US"), "다시 시작", "", true);
     } else resetBall();
   }
+}
+
+
+const NAMES = {
+  AAPL:"Apple Inc.", MSFT:"Microsoft Corporation", NVDA:"NVIDIA Corporation", GOOGL:"Alphabet Inc.", AMZN:"Amazon.com, Inc.",
+  META:"Meta Platforms, Inc.", TSLA:"Tesla, Inc.", AVGO:"Broadcom Inc.", "BRK.B":"Berkshire Hathaway Inc.", LLY:"Eli Lilly and Company",
+  V:"Visa Inc.", JPM:"JPMorgan Chase & Co.", WMT:"Walmart Inc.", XOM:"Exxon Mobil Corporation", UNH:"UnitedHealth Group Incorporated",
+  MA:"Mastercard Incorporated", COST:"Costco Wholesale Corporation", ORCL:"Oracle Corporation", NFLX:"Netflix, Inc.", HD:"The Home Depot, Inc.",
+  PG:"The Procter & Gamble Company", JNJ:"Johnson & Johnson", KO:"The Coca-Cola Company", PEP:"PepsiCo, Inc.", AMD:"Advanced Micro Devices, Inc.",
+  CRM:"Salesforce, Inc.", ADBE:"Adobe Inc.", DIS:"The Walt Disney Company", NKE:"NIKE, Inc.", SBUX:"Starbucks Corporation",
+  PLTR:"Palantir Technologies Inc.", UBER:"Uber Technologies, Inc.", ABNB:"Airbnb, Inc.", COIN:"Coinbase Global, Inc.", SOFI:"SoFi Technologies, Inc.",
+  RIVN:"Rivian Automotive, Inc.", F:"Ford Motor Company", T:"AT&T Inc.", INTC:"Intel Corporation", PFE:"Pfizer Inc.",
+  BAC:"Bank of America Corporation", PYPL:"PayPal Holdings, Inc."
+};
+const PLACEHOLDER = "벽돌을 맞추면 기업 정보가 표시됩니다";
+function showCo(b) {
+  const lg = $("lg");
+  lg.className = "";
+  lg.dataset.len = b.t.length;
+  lg.textContent = b.t;
+  $("cn").textContent = NAMES[b.t] || b.t;
+  $("cs").textContent = b.t;
+  const p = $("cp"); p.textContent = b.pct; p.style.color = b.up ? UPC : DNC;
+  const co = $("co"); co.classList.remove("flash"); void co.offsetWidth; co.classList.add("flash");
+}
+function resetCo() {
+  const lg = $("lg"); lg.className = ""; lg.dataset.len = 1; lg.textContent = "$";
+  $("cn").textContent = PLACEHOLDER; $("cs").textContent = ""; $("cp").textContent = "";
 }
 
 /* ---------- 그리기 ---------- */
