@@ -10,7 +10,7 @@
 <title>티커 브레이커 | 방구석월가</title>
 <meta name="description" content="미국주식 티커 벽돌을 깨고 포트폴리오를 키우는 월스트리트 아케이드 게임">
 <meta property="og:title" content="티커 브레이커 | 방구석월가">
-<meta property="og:description" content="미국주식 티커 벽돌을 깨고 게임 점수를 쌓아보세요.">
+<meta property="og:description" content="미국주식 티커 벽돌을 깨고 포트폴리오를 키워보세요.">
 <meta property="og:image" content="bg.jpg">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%93%88%3C/text%3E%3C/svg%3E">
 <link rel="preload" as="image" href="bg.jpg">
@@ -24,11 +24,17 @@
     <span id="li" aria-label="남은 목숨"><i>🐂</i><i>🐂</i><i>🐂</i></span>
   </header>
 
+  <div id="co" aria-live="polite">
+    <div id="lg" data-len="1">$</div>
+    <div id="nm"><b id="cn">벽돌을 맞추면 기업 정보가 표시됩니다</b><span id="cs"></span></div>
+    <em id="cp"></em>
+  </div>
+
   <section id="wrap">
     <canvas id="c" aria-label="미국주식 티커 벽돌깨기 게임 화면"></canvas>
     <div id="ov">
       <h1>티커 브레이커</h1>
-      <p>미국주식 티커를 깨고<br>게임 점수를 쌓아보세요</p>
+      <p>미국주식 티커를 깨고<br>포트폴리오를 키워보세요</p>
       <div class="btn">터치하여 시작</div>
       <small>손가락을 좌우로 움직여 공을 받아내세요</small>
     </div>
