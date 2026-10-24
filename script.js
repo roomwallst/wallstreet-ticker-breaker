@@ -500,7 +500,7 @@ function loop(n) {
 }
 function px(e) { const r = cv.getBoundingClientRect(); pad.x = (e.clientX - r.left) / r.width * W; }
 window.addEventListener("pointermove", px, { passive: true });
-window.addEventListener("pointerdown", e => {
+wrap.addEventListener("pointerdown", e => {
   px(e);
   if (state === "title") { if (e.target.closest && e.target.closest("#startBtn")) tap(); return; }   // 시작 화면에서는 버튼을 눌러야만 시작
   tap();
