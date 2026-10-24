@@ -33,7 +33,7 @@ const pad = { x: W / 2, y: H - 42, w: PAD_W, h: PAD_H };
 const keys = {};
 
 /* 배경: 1라운드 월스트리트 야경, 2라운드부터 뉴욕증권거래소 실내 (dark: 전체 어둡게, lane: 패들·공이 움직이는 아래쪽 추가로 어둡게) */
-const BGDEF = { 1: { src: "bg.jpg", dark: .22, lane: .5 }, 2: { src: "bg2.jpg", dark: .55, lane: .7 } };
+const BGDEF = { 1: { src: "bg.jpg", dark: .22, lane: .5 }, 2: { src: "bg2.jpg", dark: .24, lane: .5 } };
 Object.keys(BGDEF).forEach(k => { const im = new Image(); im.onload = () => { bgImgs[k] = im; makeBg(); }; im.src = BGDEF[k].src; });
 function setBg(i) { if (i === bgIdx) return; bgPrev = bgIdx; bgIdx = i; bgFade = 0; }
 
