@@ -33,6 +33,9 @@ const keys = {};
 const bgImg = new Image();
 bgImg.onload = () => { bgReady = true; makeBg(); };
 bgImg.src = "bg.jpg";
+const bgImg2 = new Image(); let bgReady2 = false, bg2 = null, bg2Blur = null;
+bgImg2.onload = () => { bgReady2 = true; makeBg(); };
+bgImg2.src = "bg2.jpg";
 
 /* ---------- 화면 크기 ---------- */
 function resize() {
@@ -64,6 +67,16 @@ function makeBg() {
   bgBlur = document.createElement("canvas");
   bgBlur.width = Math.ceil(W / 8); bgBlur.height = Math.ceil(H / 8);
   bgBlur.getContext("2d").drawImage(bg, 0, 0, bgBlur.width, bgBlur.height);
+  bg2 = document.createElement("canvas"); bg2.width = cv.width; bg2.height = cv.height;
+  const g2 = bg2.getContext("2d"); g2.setTransform(k,0,0,k,0,0);
+  g2.fillStyle="#0a1230"; g2.fillRect(0,0,W,H);
+  if(bgReady2) g2.drawImage(bgImg2,0,0,W,H);
+  g2.fillStyle="rgba(6,10,18,.55)"; g2.fillRect(0,0,W,H);
+  const gr2=g2.createLinearGradient(0,440,0,H);
+  gr2.addColorStop(0,"rgba(5,8,14,0)"); gr2.addColorStop(1,"rgba(5,8,14,.7)");
+  g2.fillStyle=gr2;g2.fillRect(0,440,W,H-440);
+  bg2Blur=document.createElement("canvas");bg2Blur.width=Math.ceil(W/8);bg2Blur.height=Math.ceil(H/8);
+  bg2Blur.getContext("2d").drawImage(bg2,0,0,bg2Blur.width,bg2Blur.height);
 }
 
 /* ---------- 골드 메탈 패들 (한 번만 그려 두고 재사용) ---------- */
@@ -343,12 +356,14 @@ function drawBall(b) {
 }
 function rr(x, y, w, h, r) { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); }
 function draw() {
-  if (bg) ctx.drawImage(bg, 0, 0, W, H); else { ctx.fillStyle = NAVY; ctx.fillRect(0, 0, W, H); }
+  const activeBg = level >= 2 && bgReady2 ? bg2 : bg;
+  if (activeBg) ctx.drawImage(activeBg, 0, 0, W, H); else { ctx.fillStyle = NAVY; ctx.fillRect(0, 0, W, H); }
   ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.lineJoin = "round";
   const alive = bricks.filter(b => b.alive);
-  if (bgBlur && alive.length) {
+  const activeBlur = level >= 2 && bgReady2 ? bg2Blur : bgBlur;
+  if (activeBlur && alive.length) {
     ctx.save(); ctx.beginPath(); for (const b of alive) ctx.roundRect(b.x, b.y, BW, BH, 6); ctx.clip();
-    ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = "high"; ctx.drawImage(bgBlur, 0, 0, W, H); ctx.restore();
+    ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = "high"; ctx.drawImage(activeBlur, 0, 0, W, H); ctx.restore();
   }
   for (const b of alive) {
     const col = b.up ? UPC : DNC, cx = b.x + BW / 2;
