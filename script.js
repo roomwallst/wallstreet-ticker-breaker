@@ -144,7 +144,7 @@ function resetBall() {
   balls = [mkBall()];
 }
 function newGame() { setBg(1); level = 1; score = 0; lives = 3; broken = 0; tape = []; build(); speed = 4.2; resetBall(); resetCo(); ui(); }
-function nextLevel() { level++; setBg(level >= 2 ? 2 : 1); speed = Math.min(8, 4.2 + .5 * (level - 1)); broken = 0; build(); resetBall(); ui(); }
+function nextLevel() { level++; setBg(level >= 2 ? 2 : 1); speed = 4.2 + .5 * (level - 1); broken = 0; build(); resetBall(); ui(); }
 function launch() {
   const b = balls[0], a = Math.random() * .6 - .3, sp = speedNow();
   b.vx = sp * Math.sin(a); b.vy = -sp * Math.cos(a);
@@ -498,9 +498,9 @@ function loop(n) {
   parts = parts.filter(p => p.l > 0); floats = floats.filter(f => f.a > 0);
   draw(); requestAnimationFrame(loop);
 }
-function px(e) { const r = cv.getBoundingClientRect(); if (!r.width) return; pad.x = Math.max(pad.w / 2, Math.min(W - pad.w / 2, (e.clientX - r.left) / r.width * W)); }
-wrap.addEventListener("pointermove", px, { passive: true });
-wrap.addEventListener("pointerdown", e => {
+function px(e) { const r = cv.getBoundingClientRect(); pad.x = (e.clientX - r.left) / r.width * W; }
+window.addEventListener("pointermove", px, { passive: true });
+window.addEventListener("pointerdown", e => {
   px(e);
   if (state === "title") { if (e.target.closest && e.target.closest("#startBtn")) tap(); return; }   // 시작 화면에서는 버튼을 눌러야만 시작
   tap();
