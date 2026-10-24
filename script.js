@@ -6,9 +6,18 @@
 /* ---------- 설정 ---------- */
 const W = 360, H = 560, COLS = 6, BW = 52, BH = 28, GAP = 4;
 const OX = (W - COLS * BW - (COLS - 1) * GAP) / 2, OY = 26;
-const PAD_W = 90, PAD_H = 19.5;               // 패들 크기(논리 좌표). 키우면 쉬워지고 줄이면 어려워집니다.
+const PAD_W = 90, PAD_H = 19.5;              // 패들 크기(논리 좌표). 키우면 쉬워지고 줄이면 어려워집니다.
 const NAVY = "#101E34", GOLD = "#DCAF61", OFFW = "#F5F2E9", UPC = "#20C997", DNC = "#FF6572";
 const SANS = '"Pretendard","SF Pro Display","Helvetica Neue",Arial,"Apple SD Gothic Neo","Noto Sans KR",sans-serif';
+const MAXB = 6, DROP = .28, ITEMS = ["X2", "+1", "-1", "SP+", "SP-"];   // 최대 공 개수 · 아이템 드롭 확률 · 종류
+const PAD_MIN = 54, PAD_MAX = 150, SPD_MIN = .44, SPD_MAX = 2.25;      // 패들 폭 한계 · 속도 배율 한계
+const IT = {                                                           // 아이템 색상
+  "X2":  { c: ["#F7E3AE", "#DCAF61"], g: "#DCAF61" },
+  "+1":  { c: ["#5BE6BF", "#20C997"], g: "#20C997" },
+  "-1":  { c: ["#FF9AA2", "#FF6572"], g: "#FF6572" },
+  "SP+": { c: ["#FFC17A", "#FF9F43"], g: "#FF9F43" },
+  "SP-": { c: ["#9CCFFF", "#5AB0FF"], g: "#5AB0FF" }
+};
 const TICKERS = "AAPL MSFT NVDA GOOGL AMZN META TSLA AVGO BRK.B LLY V JPM WMT XOM UNH MA COST ORCL NFLX HD PG JNJ KO PEP AMD CRM ADBE DIS NKE SBUX PLTR UBER ABNB COIN SOFI RIVN F T INTC PFE BAC PYPL".split(" ");
 const BIG = new Set("AAPL MSFT NVDA GOOGL AMZN META TSLA AVGO".split(" "));
 
@@ -16,10 +25,9 @@ const BIG = new Set("AAPL MSFT NVDA GOOGL AMZN META TSLA AVGO".split(" "));
 const $ = id => document.getElementById(id);
 const cv = $("c"), ctx = cv.getContext("2d", { alpha: false }), ov = $("ov"), wrap = $("wrap");
 let sc = 1, state = "title", stateAt = 0, level = 1, score = 0, lives = 3, broken = 0, speed = 4.2, best = 0;
-let bricks = [], floats = [], tape = [], parts = [], trail = [];
+let bricks = [], floats = [], tape = [], parts = [], items = [], balls = [], spd = 1;
 let bg = null, bgBlur = null, padSprite = null, bgReady = false;
 const pad = { x: W / 2, y: H - 42, w: PAD_W, h: PAD_H };
-const ball = { x: W / 2, y: 0, vx: 0, vy: 0, r: 10 };
 const keys = {};
 
 const bgImg = new Image();
@@ -61,7 +69,7 @@ function makeBg() {
 /* ---------- 골드 메탈 패들 (한 번만 그려 두고 재사용) ---------- */
 function makePad() {
   if (!cv.width) return;
-  const m = 14, k = cv.width / W, x = m, y = m, w = PAD_W, h = PAD_H, r = h / 2;
+  const m = 14, k = cv.width / W, x = m, y = m, w = pad.w, h = pad.h, r = h / 2;
   padSprite = document.createElement("canvas");
   padSprite.width = Math.ceil((w + 2 * m) * k); padSprite.height = Math.ceil((h + 2 * m) * k);
   const g = padSprite.getContext("2d"); g.setTransform(k, 0, 0, k, 0, 0);
@@ -123,12 +131,18 @@ function build() {
              x: OX + (i % COLS) * (BW + GAP), y: OY + Math.floor(i / COLS) * (BH + GAP) };
   });
 }
-function resetBall() { state = "ready"; ball.vx = ball.vy = 0; }
+const speedNow = () => (speed + broken * .02) * spd;
+function mkBall() { return { x: pad.x, y: pad.y - pad.h / 2 - 11, vx: 0, vy: 0, r: 10, trail: [], dead: false }; }
+function resetBall() {
+  state = "ready"; spd = 1; items = [];
+  if (pad.w !== PAD_W) { pad.w = PAD_W; makePad(); }
+  balls = [mkBall()];
+}
 function newGame() { level = 1; score = 0; lives = 3; broken = 0; tape = []; build(); speed = 4.2; resetBall(); resetCo(); ui(); }
-function nextLevel() { level++; speed = Math.min(8, 4.2 + .45 * (level - 1)); broken = 0; build(); resetBall(); ui(); }
+function nextLevel() { level++; speed = Math.min(8, 4.2 + .5 * (level - 1)); broken = 0; build(); resetBall(); ui(); }
 function launch() {
-  const a = Math.random() * .6 - .3;
-  ball.vx = speed * Math.sin(a); ball.vy = -speed * Math.cos(a);
+  const b = balls[0], a = Math.random() * .6 - .3, sp = speedNow();
+  b.vx = sp * Math.sin(a); b.vy = -sp * Math.cos(a);
   state = "play"; ov.style.display = "none";
 }
 function ui() {
@@ -149,11 +163,11 @@ function tap() {
   else if (state === "clear") { nextLevel(); launch(); }
   else if (state === "ready") launch();
 }
-function norm() {
-  const sp = Math.min(8.8, speed + broken * .02), m = Math.hypot(ball.vx, ball.vy) || 1;
-  ball.vx *= sp / m; ball.vy *= sp / m;
+function norm(b) {
+  const sp = speedNow(), m = Math.hypot(b.vx, b.vy) || 1;
+  b.vx *= sp / m; b.vy *= sp / m;
   const min = sp * .28;
-  if (Math.abs(ball.vy) < min) { ball.vy = (ball.vy < 0 ? -1 : 1) * min; const k = Math.sqrt(sp * sp - min * min); ball.vx = (ball.vx < 0 ? -1 : 1) * k; }
+  if (Math.abs(b.vy) < min) { b.vy = (b.vy < 0 ? -1 : 1) * min; const k = Math.sqrt(sp * sp - min * min); b.vx = (b.vx < 0 ? -1 : 1) * k; }
 }
 function burst(x, y, c, n, sp) {
   for (let i = 0; i < n; i++) {
@@ -161,57 +175,99 @@ function burst(x, y, c, n, sp) {
     parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, c, l: 1, m: 14 + Math.random() * 10 });
   }
 }
-function hit(b) {
-  b.hp--; burst(ball.x, ball.y, GOLD, 4, 1.7); showCo(b);
+function hit(b, bl) {
+  b.hp--; burst(bl.x, bl.y, GOLD, 4, 1.7); showCo(b);
   if (b.hp <= 0) {
     burst(b.x + BW / 2, b.y + BH / 2, b.up ? UPC : DNC, 12, 2.8);
     b.alive = false; broken++;
     const g = 100 * level; score += g;
     floats.push({ x: b.x + BW / 2, y: b.y, t: "+" + g, a: 1, c: b.up ? UPC : DNC });
     tape.unshift({ t: b.t, pct: b.pct, up: b.up });
+    if (Math.random() < DROP) items.push({ t: ITEMS[Math.floor(Math.random() * ITEMS.length)], x: b.x + BW / 2, y: b.y + BH / 2 });
     if (!bricks.some(k => k.alive)) {
-      const bonus = lives * 500; score += bonus; state = "clear";
+      const bonus = lives * 500; score += bonus; state = "clear"; items = [];
       if (score > best) best = score;
       show("라운드 " + level + " 클리어", "잔여 목숨 보너스 +$" + bonus.toLocaleString("en-US"), "다음 라운드");
     }
   }
   ui();
 }
+
+/* ---------- 아이템 ---------- */
+function setPadW(w) { const nw = Math.max(PAD_MIN, Math.min(PAD_MAX, w)); if (Math.abs(nw - pad.w) < .01) return false; pad.w = nw; makePad(); return true; }
+function setSpd(v) { const n = Math.max(SPD_MIN, Math.min(SPD_MAX, v)); if (Math.abs(n - spd) < .001) return false; spd = n; balls.forEach(norm); return true; }
+function applyItem(t) {
+  let msg = "";
+  if (t === "X2") {
+    if (balls.length >= MAXB) msg = "공 최대 개수";
+    else {
+      const add = [];
+      for (const b of balls) {
+        if (balls.length + add.length >= MAXB) break;
+        const f = Math.atan2(b.vy, b.vx), c = { ...b, trail: [], dead: false };
+        b.vx = Math.cos(f - .35); b.vy = Math.sin(f - .35);
+        c.vx = Math.cos(f + .35); c.vy = Math.sin(f + .35);
+        norm(b); norm(c); add.push(c);
+      }
+      balls.push(...add); msg = "공 분열 ×2";
+    }
+  } else if (t === "+1") msg = setPadW(pad.w * 1.1) ? "패들 +10%" : "패들 최대";
+  else if (t === "-1") msg = setPadW(pad.w * .9) ? "패들 -10%" : "패들 최소";
+  else if (t === "SP+") msg = setSpd(spd * 1.5) ? "속도 ×1.5" : "속도 최대";
+  else if (t === "SP-") msg = setSpd(spd / 1.5) ? "속도 ÷1.5" : "속도 최소";
+  floats.push({ x: Math.max(46, Math.min(W - 46, pad.x)), y: pad.y - 30, t: msg, a: 1.4, c: IT[t].g });
+}
+
+/* ---------- 공 이동 (물리·충돌은 기존과 동일, 큰 속도에서 뚫고 지나가지 않도록 잘게 나눠 이동) ---------- */
+function moveBall(b, dt) {
+  b.x += b.vx * dt; b.y += b.vy * dt;
+  if (b.x < b.r) { b.x = b.r; b.vx = Math.abs(b.vx); }
+  if (b.x > W - b.r) { b.x = W - b.r; b.vx = -Math.abs(b.vx); }
+  if (b.y < b.r) { b.y = b.r; b.vy = Math.abs(b.vy); }
+  if (b.vy > 0 && b.y + b.r >= pad.y - pad.h / 2 && b.y - b.r <= pad.y + pad.h / 2 && Math.abs(b.x - pad.x) <= pad.w / 2 + b.r) {
+    const t = (b.x - pad.x) / (pad.w / 2), a = t * 1.05, sp = speedNow();
+    b.vx = sp * Math.sin(a); b.vy = -sp * Math.cos(a); b.y = pad.y - pad.h / 2 - b.r;
+  }
+  for (const k of bricks) {
+    if (!k.alive) continue;
+    const cx = Math.max(k.x, Math.min(b.x, k.x + BW)), cy = Math.max(k.y, Math.min(b.y, k.y + BH));
+    const dx = b.x - cx, dy = b.y - cy;
+    if (dx * dx + dy * dy < b.r * b.r) {
+      if (dx === 0 && dy === 0) b.vy = -b.vy;
+      else if (Math.abs(dx) > Math.abs(dy)) b.vx = dx > 0 ? Math.abs(b.vx) : -Math.abs(b.vx);
+      else b.vy = dy > 0 ? Math.abs(b.vy) : -Math.abs(b.vy);
+      hit(k, b); norm(b); break;
+    }
+  }
+  if (b.y > H + b.r) b.dead = true;
+}
+function loseLife() {
+  lives--; ui();
+  if (lives <= 0) {
+    state = "over"; if (score > best) best = score;
+    show("게임 오버", "최종 $" + score.toLocaleString("en-US") + "<br>이번 접속 최고 $" + best.toLocaleString("en-US"), "다시 시작", "", true);
+  } else resetBall();
+}
 function step(dt) {
   const dir = (keys.ArrowRight || keys.d ? 1 : 0) - (keys.ArrowLeft || keys.a ? 1 : 0);
   if (dir) pad.x += dir * 7 * dt;
   pad.x = Math.max(pad.w / 2, Math.min(W - pad.w / 2, pad.x));
-  if (state === "ready") { trail.length = 0; ball.x = pad.x; ball.y = pad.y - pad.h / 2 - ball.r - 1; return; }
-  if (state !== "play") { trail.length = 0; return; }
-  ball.x += ball.vx * dt; ball.y += ball.vy * dt;
-  trail.push({ x: ball.x, y: ball.y }); if (trail.length > 9) trail.shift();
-  if (ball.x < ball.r) { ball.x = ball.r; ball.vx = Math.abs(ball.vx); }
-  if (ball.x > W - ball.r) { ball.x = W - ball.r; ball.vx = -Math.abs(ball.vx); }
-  if (ball.y < ball.r) { ball.y = ball.r; ball.vy = Math.abs(ball.vy); }
-  if (ball.vy > 0 && ball.y + ball.r >= pad.y - pad.h / 2 && ball.y - ball.r <= pad.y + pad.h / 2 && Math.abs(ball.x - pad.x) <= pad.w / 2 + ball.r) {
-    const t = Math.max(-1, Math.min(1, (ball.x - pad.x) / (pad.w / 2))), a = t * 1.05, sp = Math.min(8.8, speed + broken * .02);
-    ball.vx = sp * Math.sin(a); ball.vy = -sp * Math.cos(a); ball.y = pad.y - pad.h / 2 - ball.r;
+  if (state === "ready") { const b = balls[0]; b.trail.length = 0; b.x = pad.x; b.y = pad.y - pad.h / 2 - b.r - 1; return; }
+  if (state !== "play") { balls.forEach(b => b.trail.length = 0); return; }
+  for (const b of balls) {
+    const n = Math.max(1, Math.ceil(Math.hypot(b.vx, b.vy) * dt / 6)), d = dt / n;
+    for (let k = 0; k < n && !b.dead && state === "play"; k++) moveBall(b, d);
+    if (!b.dead) { b.trail.push({ x: b.x, y: b.y }); if (b.trail.length > 9) b.trail.shift(); }
   }
-  for (const b of bricks) {
-    if (!b.alive) continue;
-    const cx = Math.max(b.x, Math.min(ball.x, b.x + BW)), cy = Math.max(b.y, Math.min(ball.y, b.y + BH));
-    const dx = ball.x - cx, dy = ball.y - cy;
-    if (dx * dx + dy * dy < ball.r * ball.r) {
-      if (dx === 0 && dy === 0) ball.vy = -ball.vy;
-      else if (Math.abs(dx) > Math.abs(dy)) ball.vx = dx > 0 ? Math.abs(ball.vx) : -Math.abs(ball.vx);
-      else ball.vy = dy > 0 ? Math.abs(ball.vy) : -Math.abs(ball.vy);
-      hit(b); norm(); break;
-    }
+  balls = balls.filter(b => !b.dead);
+  for (const it of items) {
+    it.y += 1.9 * dt;
+    if (Math.abs(it.x - pad.x) <= pad.w / 2 + 20 && it.y + 10 >= pad.y - pad.h / 2 && it.y - 10 <= pad.y + pad.h / 2) { it.done = true; applyItem(it.t); }
+    else if (it.y > H + 20) it.done = true;
   }
-  if (ball.y > H + ball.r && state === "play") {
-    lives--; ui();
-    if (lives <= 0) {
-      state = "over"; if (score > best) best = score;
-      show("게임 오버", "최종 $" + score.toLocaleString("en-US") + "<br>이번 접속 최고 $" + best.toLocaleString("en-US"), "다시 시작", "", true);
-    } else resetBall();
-  }
+  items = items.filter(i => !i.done);
+  if (state === "play" && balls.length === 0) loseLife();
 }
-
 
 const NAMES = {
   AAPL:"Apple Inc.", MSFT:"Microsoft Corporation", NVDA:"NVIDIA Corporation", GOOGL:"Alphabet Inc.", AMZN:"Amazon.com, Inc.",
@@ -224,37 +280,56 @@ const NAMES = {
   RIVN:"Rivian Automotive, Inc.", F:"Ford Motor Company", T:"AT&T Inc.", INTC:"Intel Corporation", PFE:"Pfizer Inc.",
   BAC:"Bank of America Corporation", PYPL:"PayPal Holdings, Inc."
 };
+/* 회사 정보 패널: logos/티커.png 파일이 있으면 실제 로고, 없으면 티커 모노그램을 보여줍니다 */
+const logoCache = {}; let curLogo = "";
 const PLACEHOLDER = "벽돌을 맞추면 기업 정보가 표시됩니다";
+function setLogo(t) {
+  curLogo = t;
+  const lg = $("lg"); lg.className = ""; lg.dataset.len = t.length; lg.textContent = t;
+  const apply = im => { if (curLogo !== t) return; lg.className = "img"; lg.textContent = ""; lg.appendChild(im.cloneNode()); };
+  const c = logoCache[t];
+  if (c === 0) return;
+  if (c) { apply(c); return; }
+  const im = new Image(); im.alt = "";
+  im.onload = () => { logoCache[t] = im; apply(im); };
+  im.onerror = () => { logoCache[t] = 0; };
+  im.src = "logos/" + encodeURIComponent(t) + ".png";
+}
 function showCo(b) {
-  const lg = $("lg");
-  lg.className = "";
-  lg.dataset.len = b.t.length;
-  lg.textContent = b.t;
-  $("cn").textContent = NAMES[b.t] || b.t;
-  $("cs").textContent = b.t;
+  $("cn").textContent = NAMES[b.t] || b.t; $("cs").textContent = b.t;
   const p = $("cp"); p.textContent = b.pct; p.style.color = b.up ? UPC : DNC;
+  setLogo(b.t);
   const co = $("co"); co.classList.remove("flash"); void co.offsetWidth; co.classList.add("flash");
 }
 function resetCo() {
-  const lg = $("lg"); lg.className = ""; lg.dataset.len = 1; lg.textContent = "$";
+  curLogo = ""; const lg = $("lg"); lg.className = ""; lg.dataset.len = 1; lg.textContent = "$";
   $("cn").textContent = PLACEHOLDER; $("cs").textContent = ""; $("cp").textContent = "";
 }
 
 /* ---------- 그리기 ---------- */
-function drawTrail() {
-  const n = trail.length;
+function drawTrail(b) {
+  const tr = b.trail, n = tr.length;
   for (let i = 0; i < n; i++) {
     const t = (i + 1) / n;
     ctx.globalAlpha = .06 + .34 * t * t; ctx.fillStyle = GOLD;
-    ctx.beginPath(); ctx.arc(trail[i].x, trail[i].y, ball.r * (.3 + .6 * t), 0, 7); ctx.fill();
+    ctx.beginPath(); ctx.arc(tr[i].x, tr[i].y, b.r * (.3 + .6 * t), 0, 7); ctx.fill();
   }
   ctx.globalAlpha = 1;
 }
-function drawPad() {
-  if (padSprite) ctx.drawImage(padSprite, pad.x - PAD_W / 2 - 14, pad.y - PAD_H / 2 - 14, PAD_W + 28, PAD_H + 28);
+function drawItem(it) {
+  const s = IT[it.t], w = 40, h = 20, x = it.x - w / 2, y = it.y - h / 2;
+  ctx.save(); ctx.shadowColor = s.g; ctx.shadowBlur = 10;
+  const g = ctx.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, s.c[0]); g.addColorStop(1, s.c[1]);
+  rr(x, y, w, h, 10); ctx.fillStyle = g; ctx.fill(); ctx.restore();
+  ctx.save(); rr(x, y, w, h, 10); ctx.clip(); ctx.fillStyle = "rgba(255,255,255,.3)"; ctx.fillRect(x, y, w, h * .45); ctx.restore();
+  rr(x + .5, y + .5, w - 1, h - 1, 10); ctx.strokeStyle = "rgba(255,255,255,.9)"; ctx.lineWidth = 1.2; ctx.stroke();
+  ctx.fillStyle = NAVY; ctx.font = "900 12px " + SANS; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(it.t, it.x, it.y + .8);
 }
-function drawBall() {
-  const x = ball.x, y = ball.y, r = ball.r;
+function drawPad() {
+  if (padSprite) ctx.drawImage(padSprite, pad.x - pad.w / 2 - 14, pad.y - pad.h / 2 - 14, pad.w + 28, pad.h + 28);
+}
+function drawBall(b) {
+  const x = b.x, y = b.y, r = b.r;
   ctx.beginPath(); ctx.arc(x, y, r + 2.5, 0, 7); ctx.fillStyle = "rgba(8,12,22,.75)"; ctx.fill();   // 패들·배경과 분리되는 어두운 테
   ctx.save(); ctx.shadowColor = "rgba(255,200,100,.95)"; ctx.shadowBlur = 12;
   const g = ctx.createRadialGradient(x - r * .35, y - r * .4, 1, x, y, r);
@@ -290,9 +365,10 @@ function draw() {
   }
   for (const p of parts) { ctx.globalAlpha = Math.max(p.l, 0); ctx.fillStyle = p.c; const z = 1.2 + 2 * p.l; ctx.fillRect(p.x - z / 2, p.y - z / 2, z, z); }
   ctx.globalAlpha = 1;
-  drawTrail(); drawPad(); drawBall();
+  items.forEach(drawItem);
+  balls.forEach(drawTrail); drawPad(); balls.forEach(drawBall);
   ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.font = "800 13px " + SANS;
-  for (const f of floats) { ctx.globalAlpha = f.a; ctx.lineWidth = 3; ctx.strokeStyle = "rgba(6,14,28,.8)"; ctx.strokeText(f.t, f.x, f.y); ctx.fillStyle = f.c; ctx.fillText(f.t, f.x, f.y); }
+  for (const f of floats) { ctx.globalAlpha = Math.min(f.a, 1); ctx.lineWidth = 3; ctx.strokeStyle = "rgba(6,14,28,.8)"; ctx.strokeText(f.t, f.x, f.y); ctx.fillStyle = f.c; ctx.fillText(f.t, f.x, f.y); }
   ctx.globalAlpha = 1;
   if (state === "ready" && ov.style.display === "none") {
     ctx.fillStyle = "rgba(245,242,233,.9)"; ctx.font = "700 13px " + SANS;
@@ -304,20 +380,13 @@ function draw() {
 let last = performance.now();
 function loop(n) {
   const dt = Math.min((n - last) / 16.67, 2.5); last = n;
-  // 고속 공이 블록을 통과하지 않도록 프레임마다 충돌 계산을 분할
-  const steps = Math.max(1, Math.ceil(dt * Math.min(8.8, speed + broken * .02) / 4));
-  for (let i = 0; i < steps; i++) step(dt / steps);
+  step(dt);
   floats.forEach(f => { f.y -= .6 * dt; f.a -= .018 * dt; });
   parts.forEach(p => { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += .06 * dt; p.l -= dt / p.m; });
   parts = parts.filter(p => p.l > 0); floats = floats.filter(f => f.a > 0);
   draw(); requestAnimationFrame(loop);
 }
-function px(e) {
-  const r = cv.getBoundingClientRect();
-  if (!r.width) return;
-  pad.x = Math.max(pad.w / 2, Math.min(W - pad.w / 2, (e.clientX - r.left) / r.width * W));
-}
-// 게임 영역에서만 터치를 처리한다. 모바일 드래그 중에도 패들을 조작할 수 있다.
+function px(e) { const r = cv.getBoundingClientRect(); if (!r.width) return; pad.x = Math.max(pad.w / 2, Math.min(W - pad.w / 2, (e.clientX - r.left) / r.width * W)); }
 wrap.addEventListener("pointermove", px, { passive: true });
 wrap.addEventListener("pointerdown", e => { px(e); tap(); }, { passive: true });
 window.addEventListener("keydown", e => {
@@ -329,6 +398,6 @@ document.addEventListener("contextmenu", e => e.preventDefault());
 
 /* ---------- 시작 ---------- */
 resize(); build();
-ball.x = pad.x; ball.y = pad.y - pad.h / 2 - ball.r - 1;
+balls = [mkBall()];
 ui(); requestAnimationFrame(loop);
 })();
